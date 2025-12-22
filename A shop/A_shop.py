@@ -1,9 +1,11 @@
 import tkinter as tk
+from tkinter import messagebox
 import pymysql
 
 class ShopLogin():
     def __init__(self, root):
         self.root = root
+        self.is_logged_in = False
         self.root.title("Shop Application")
         self.root.geometry("600x400")
 
@@ -19,7 +21,7 @@ class ShopLogin():
 
         self.password = tk.Label(self.frame, text="Password:", bg="light grey", width=10, height=2)
         self.password.grid(row=1, column=0)
-        self.enterPass = tk.Entry(self.frame)
+        self.enterPass = tk.Entry(self.frame, show='*')
         self.enterPass.grid(row=1, column=1, padx=(5, 10))
 
         self.signIn_bt = tk.Button(self.frame, text="Sign In", command=self.signIn, width=10)
@@ -29,18 +31,78 @@ class ShopLogin():
         self.reg_bt.grid(row=3, column=1, padx=10, pady=20)
 
     def signIn(self):
-        userName = self.enterName.get()
-        password = self.password.get()
+        if self.tries < 1:
+            messagebox.showerror("Error", "You are out of tries\nTry again later")
+            return
 
-        signedIn = False
-        pass
+        userName = self.enterName.get()
+        password = self.enterPass.get()
+
+        con = pymysql.connect(host="localhost", user="root", password="", database="shop users")
+        cur = con.cursor()
+
+        query = "SELECT * FROM users WHERE username = %s AND password = %s"
+        cur.execute(query, (userName, password))
+
+        if cur.fetchone():
+            messagebox.showinfo("Success", "You successfuly entered your account")
+            con.close()
+            self.is_logged_in = True
+            self.root.destroy()
+        else:
+            messagebox.showerror("Error", "Incorrect Username or Password.\nTry again")
+            self.tries -= 1
+
+        con.close()
+
+        
 
     def register(self):
-        pass
+        userName = self.enterName.get()
+        password = self.enterPass.get()
 
-    def logMessage(self, message, color):
-        pass
+        if not userName or not password:
+            messagebox.showerror("Error", "You must fill both username and password")
+            return
+        
+        try:
+            con = pymysql.connect(host="localhost", user="root", password="", database="shop users")
+            cur = con.cursor()
+
+            query = "INSERT INTO users(username, password) VALUES(%s, %s)"
+            cur.execute(query, (userName, password))
+            con.commit()
+
+            messagebox.showinfo("Success", "You successfuly registered!")
+            self.tries = 3
+            
+        except pymysql.err.IntegrityError:
+            messagebox.showerror("Error", "The password is already in use")
+        except Exception as e:
+            messagebox.showerror("Error", f"Something went wrong: {e}")
+        finally:
+            if 'con' in locals() and con.open:
+                con.close()
+
+        con.close()
+
+class ShopMenu():
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Shop")
+        self.root.geometry("600x400")
+
+        self.frame = tk.Frame(self.root)
+        self.frame.pack(expand=True)
+
 root = tk.Tk()
-obj = ShopLogin(root)
+logging_window = ShopLogin(root)
 root.mainloop()
+del root
+
+if logging_window.is_logged_in:
+    root = tk.Tk()
+    shop_window = ShopMenu(root)
+    root.mainloop()
+
 
