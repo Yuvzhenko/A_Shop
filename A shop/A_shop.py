@@ -6,7 +6,7 @@ class ShopLogin():
     def __init__(self, root):
         self.root = root
         self.is_logged_in = False
-        self.root.title("Shop Application")
+        self.root.title("Shop Login")
         self.root.geometry("600x400")
 
         self.tries = 3
@@ -92,17 +92,48 @@ class ShopMenu():
         self.root.title("Shop")
         self.root.geometry("600x400")
 
-        self.frame = tk.Frame(self.root)
-        self.frame.pack(expand=True)
+        self.logo_frame = tk.Frame(self.root)
+        self.logo_frame.place(x=100, y=50, anchor="center")
 
-root = tk.Tk()
-logging_window = ShopLogin(root)
-root.mainloop()
-del root
+        self.logo = tk.Label(self.logo_frame, text="DELIVERY", font=("Arial black", 24))
+        self.logo.pack()
 
-if logging_window.is_logged_in:
+        self.categories_frame = tk.Frame(self.root)
+        self.categories_frame.place(anchor="center", x=100, y=230)
+        
+        self.categories = [
+            "Drinks", "Snacks", "Alcohol", 
+            "Cigarette", "Ice Cream", "Papers", 
+            "AutoChem", "Hats", "Glasses", 
+            "Plush toys", "Donuts", "Toys"
+        ]
+        self.column_count = 2
+
+        for index, name in enumerate(self.categories):
+            lambda name=name:self.open_category(name)
+            btn = tk.Button(self.categories_frame, text=name, bd=0, font=("Arial", 11),
+                             command=lambda n= name: self.open_category(n))
+
+            r = index // self.column_count
+            c = index % self.column_count
+
+            btn.grid(row=r, column=c, padx=10, pady=10, sticky="ew")
+
+    def open_category(self, category_name):
+        pass
+
+        
+if __name__ == "__main__":
+    '''root = tk.Tk()
+    logging_window = ShopLogin(root)
+    root.mainloop()
+    del root
+
+    if logging_window.is_logged_in:
+        root = tk.Tk()
+        shop_window = ShopMenu(root)
+        root.mainloop()
+    '''
     root = tk.Tk()
     shop_window = ShopMenu(root)
     root.mainloop()
-
-
