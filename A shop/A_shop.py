@@ -38,7 +38,7 @@ class ShopLogin():
         userName = self.enterName.get()
         password = self.enterPass.get()
 
-        con = pymysql.connect(host="localhost", user="root", password="", database="shop users")
+        con = pymysql.connect(host="localhost", user="root", password="", database="shop")
         cur = con.cursor()
 
         query = "SELECT * FROM users WHERE username = %s AND password = %s"
@@ -66,7 +66,7 @@ class ShopLogin():
             return
         
         try:
-            con = pymysql.connect(host="localhost", user="root", password="", database="shop users")
+            con = pymysql.connect(host="localhost", user="root", password="", database="shop")
             cur = con.cursor()
 
             query = "INSERT INTO users(username, password) VALUES(%s, %s)"
@@ -90,7 +90,12 @@ class ShopMenu():
     def __init__(self, root):
         self.root = root
         self.root.title("Shop")
-        self.root.geometry("600x400")
+        self.root.geometry("800x400")
+        self.cart = {}
+        self.purchase_costs = 0
+
+        self.products_frame = tk.Frame(self.root)
+        self.products_frame.place(anchor="center", x=400, y=160)
 
         self.logo_frame = tk.Frame(self.root)
         self.logo_frame.place(x=100, y=50, anchor="center")
@@ -103,7 +108,7 @@ class ShopMenu():
         
         self.categories = [
             "Drinks", "Snacks", "Alcohol", 
-            "Cigarette", "Ice Cream", "Papers", 
+            "Cigarettes", "Ice Cream", "Papers", 
             "AutoChem", "Hats", "Glasses", 
             "Plush toys", "Donuts", "Toys"
         ]
@@ -118,10 +123,92 @@ class ShopMenu():
             c = index % self.column_count
 
             btn.grid(row=r, column=c, padx=10, pady=10, sticky="ew")
+        
+        self.cartFrame = tk.Frame(self.root)
+        self.cartFrame.place(anchor="center", x=750, y=50)
+        self.cartButton = tk.Button(self.cartFrame, text="cart", font=("Arial", 15, "bold"), bd=0,
+                                    command=self.cartFunc)
+        self.cartButton.pack()
 
     def open_category(self, category_name):
+
+        for widget in self.products_frame.winfo_children():
+            widget.destroy()
+
+        try:
+            con = pymysql.connect(host="localhost", user="root", password="", database="shop")
+            cur = con.cursor()
+
+            query = "SELECT name, price, remains FROM products WHERE category = %s"
+            cur.execute(query, category_name)
+
+            products = cur.fetchall()
+
+            con.close()
+
+            tk.Label(self.products_frame, text=f"Category: {category_name}", font=("Arial", 14, "bold"),
+                     bg="white").grid(row=0, column=0)
+            if not products:
+                tk.Label(self.products_frame, text="No products avalible", bg="white").grid(row=1, column=0, fill="x")
+                return
+            r = 2
+            for product in products:
+                p_name = product[0]
+                p_price = product[1]
+                p_remains = product[2]
+
+                item_lable = tk.Label(self.products_frame, text=p_name, font=("Arial", 15),
+                                      bg="white", anchor="w")
+                item_lable.grid(row= r, column=0, padx=100, pady=2)
+                if p_remains > 0:
+                    item_addToCart_button = tk.Button(self.products_frame, text=f"Buy for {p_price}$", 
+                                               command=lambda p=product: self.addToCart_button_func(p))
+                    item_addToCart_button.grid(row=r, column=1)
+                else:
+                    item_addToCart_button = tk.Button(self.products_frame, text=f"ran out", bg="gray", state="disabled")
+                    item_addToCart_button.grid(row=r, column=1)
+                r += 1
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Something went wrong:{e}")
+
+    def cartFunc(self):
+        for widget in self.products_frame.winfo_children():
+            widget.destroy()
+
+        if not self.cart:
+            tk.Label(self.products_frame, text="Cart is empty", font=("Arial", 15), 
+                     bg="white").grid(row=1, column=0)
+            return
+
+        r = 2
+        for product, info in self.cart.items():
+            amount = info['qty']
+            price = info['price']
+
+            item_lable = tk.Label(self.products_frame, text=f"{product} | Price: {price * amount}$ | Amount: {amount}",
+                                   font=("Arial", 12), bg="white", anchor="w")
+            item_lable.grid(row= r, column=0, padx=100, pady=2)
+
+            r += 1
+
+        self.buyButton = tk.Button(self.products_frame, text=f"Buy for {self.purchase_costs}$",
+                                    font=("Arial black", 12), command=self.buy_button_function)
+        self.buyButton.grid(row=r, column=0, pady=15)
+
+    def buy_button_function(self):
         pass
 
+    def addToCart_button_func(self, product):
+        p_name = product[0]
+        p_price = product[1]
+
+        if p_name in self.cart:
+            self.cart[p_name]['qty'] += 1
+        else:
+            self.cart[p_name] = {'price': p_price, 'qty': 1}
+        
+        self.purchase_costs += p_price
         
 if __name__ == "__main__":
     '''root = tk.Tk()
