@@ -8,6 +8,7 @@ class ShopLogin():
         self.is_logged_in = False
         self.root.title("Shop Login")
         self.root.geometry("600x400")
+        self.currentID = None
 
         self.tries = 3
 
@@ -44,8 +45,11 @@ class ShopLogin():
         query = "SELECT * FROM users WHERE username = %s AND password = %s"
         cur.execute(query, (userName, password))
 
-        if cur.fetchone():
+        user_data = cur.fetchone()
+
+        if user_data:
             messagebox.showinfo("Success", "You successfuly entered your account")
+            self.currentID = user_data[0]
             con.close()
             self.is_logged_in = True
             self.root.destroy()
@@ -54,8 +58,6 @@ class ShopLogin():
             self.tries -= 1
 
         con.close()
-
-        
 
     def register(self):
         userName = self.enterName.get()
@@ -73,6 +75,9 @@ class ShopLogin():
             cur.execute(query, (userName, password))
             con.commit()
 
+            cur.execute("SELECT LAST_INSERT_ID()")
+            self.currentID = cur.fetchone()[0]
+
             messagebox.showinfo("Success", "You successfuly registered!")
             self.tries = 3
             
@@ -84,15 +89,27 @@ class ShopLogin():
             if 'con' in locals() and con.open:
                 con.close()
 
-        con.close()
-
 class ShopMenu():
-    def __init__(self, root):
+    def __init__(self, root, currentID):
         self.root = root
         self.root.title("Shop")
         self.root.geometry("800x400")
         self.cart = {}
         self.purchase_costs = 0
+        
+        con = pymysql.connect(host="localhost", user="root", password="", database="shop")
+        cur = con.cursor()
+
+        query = "SELECT balance FROM users WHERE ID = %s"
+        cur.execute(query, (currentID,))
+        
+        result = cur.fetchone()
+        self.balance_amount = result[0]
+
+        cur.execute("SELECT DISTINCT category FROM products")
+        self.categories = [row[0] for row in cur.fetchall()]
+
+        con.close()
 
         self.products_frame = tk.Frame(self.root)
         self.products_frame.place(anchor="center", x=400, y=160)
@@ -105,13 +122,7 @@ class ShopMenu():
 
         self.categories_frame = tk.Frame(self.root)
         self.categories_frame.place(anchor="center", x=100, y=230)
-        
-        self.categories = [
-            "Drinks", "Snacks", "Alcohol", 
-            "Cigarettes", "Ice Cream", "Papers", 
-            "AutoChem", "Hats", "Glasses", 
-            "Plush toys", "Donuts", "Toys"
-        ]
+
         self.column_count = 2
 
         for index, name in enumerate(self.categories):
@@ -125,10 +136,19 @@ class ShopMenu():
             btn.grid(row=r, column=c, padx=10, pady=10, sticky="ew")
         
         self.cartFrame = tk.Frame(self.root)
-        self.cartFrame.place(anchor="center", x=750, y=50)
+        self.cartFrame.place(anchor="center", x=730, y=50)
+
         self.cartButton = tk.Button(self.cartFrame, text="cart", font=("Arial", 15, "bold"), bd=0,
                                     command=self.cartFunc)
         self.cartButton.pack()
+
+        self.balance_lable = tk.Label(self.cartFrame, text=f"Balance: ${self.balance_amount}", font=("Arial", 12))
+        self.balance_lable.pack(pady=10)
+
+        self.replenishment_button = tk.Button(self.cartFrame, text="+", font=("Arial", 10), bd=0,
+                                              command=self.replenish_balance)
+        self.replenishment_button.pack()
+
 
     def open_category(self, category_name):
 
@@ -139,7 +159,7 @@ class ShopMenu():
             con = pymysql.connect(host="localhost", user="root", password="", database="shop")
             cur = con.cursor()
 
-            query = "SELECT name, price, remains FROM products WHERE category = %s"
+            query = "SELECT name, price, remains, category FROM products WHERE category = %s"
             cur.execute(query, category_name)
 
             products = cur.fetchall()
@@ -190,37 +210,152 @@ class ShopMenu():
                                    font=("Arial", 12), bg="white", anchor="w")
             item_lable.grid(row= r, column=0, padx=100, pady=2)
 
+            item_minus_button = tk.Button(self.products_frame, text="—", font=("Arial", 12),
+                                         command=lambda p=product: self.modify_cart(p, -1))
+            item_minus_button.grid(row=r, column=1)
+
             r += 1
 
         self.buyButton = tk.Button(self.products_frame, text=f"Buy for {self.purchase_costs}$",
                                     font=("Arial black", 12), command=self.buy_button_function)
         self.buyButton.grid(row=r, column=0, pady=15)
 
+    def modify_cart(self, product, change):
+        if product not in self.cart:
+            return
+
+        current_qty = self.cart[product]['qty']
+        p_price = self.cart[product]['price']
+
+        new_qty = current_qty + change
+
+        if new_qty <= 0:
+            self.purchase_costs -= p_price * current_qty
+            del self.cart[product]
+        else:
+            con = pymysql.connect(host="localhost", user="root", password="", database="shop")
+            cur = con.cursor()
+
+            query = "SELECT remains FROM products WHERE name = %s"
+            cur.execute(query, (product,))
+            result = cur.fetchone()
+            con.close()
+
+            if result and new_qty > result[0]:
+                messagebox.showerror("Error", "No more items of this product are available")
+                return
+
+            self.cart[product]['qty'] = new_qty
+            self.purchase_costs += p_price * change
+
+        self.cartFunc()
+
     def buy_button_function(self):
-        pass
+        if self.purchase_costs > self.balance_amount:
+            messagebox.showerror("Error", "You don't have enough money to make this purchase")
+            return
+        self.balance_amount -= self.purchase_costs
+        self.balance_lable.config(text=f"Balance: ${self.balance_amount}")
+
+        con = pymysql.connect(host="localhost", user="root", password="", database="shop")
+        cur = con.cursor()
+        for product, info in self.cart.items():
+            p_name = product
+            p_qty = info['qty']
+
+            query = "UPDATE products SET remains = remains - %s WHERE name = %s"
+            cur.execute(query, (p_qty, p_name))
+
+        query = "UPDATE users SET balance = %s WHERE ID = %s"
+        cur.execute(query, (self.balance_amount, currentID))
+        con.commit()
+
+        query = "INSERT INTO sellingHystory(customerID, productName, quantity, categoryName, price) VALUES(%s, %s, %s, %s, %s)"
+        for product, info in self.cart.items():
+            p_name = product
+            p_qty = info['qty']
+            p_category = info['category']
+            p_price = info['price']
+
+            cur.execute(query, (currentID, p_name, p_qty, p_category, p_price * p_qty))
+        con.commit()
+
+        con.close()
+
+        self.purchase_costs = 0
+        self.cart.clear()
+        self.cartFunc()
 
     def addToCart_button_func(self, product):
         p_name = product[0]
         p_price = product[1]
+        p_remains = product[2]
+        p_category = product[3]
+
+        qnt_in_cart = 0
+        if p_name in self.cart:
+            qnt_in_cart = self.cart[p_name]['qty']
+
+        if qnt_in_cart + 1 > p_remains:
+            messagebox.showerror("Error", "No more items of this product are available")
+            return
 
         if p_name in self.cart:
             self.cart[p_name]['qty'] += 1
         else:
-            self.cart[p_name] = {'price': p_price, 'qty': 1}
+            self.cart[p_name] = {'price': p_price, 'category': p_category, 'qty': 1}
         
         self.purchase_costs += p_price
+
+    def replenish_balance(self):
+        def add_balance():
+            try:
+                amount = int(entry.get())
+                if amount <= 0:
+                    raise ValueError("Amount must be positive")
+                self.balance_amount += amount
+                self.balance_lable.config(text=f"Balance: ${self.balance_amount}")
+                try:
+                    con = pymysql.connect(host="localhost", user="root", password="", database="shop")
+                    cur = con.cursor()
+
+                    query = "UPDATE users SET balance = %s WHERE ID = %s"
+                    cur.execute(query, (self.balance_amount, currentID))
+                    con.commit()
+                    con.close()
+
+                    top.destroy()
+                    
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to update balance in database: {e}")
+            except ValueError as ve:
+                messagebox.showerror("Error", f"Invalid amount: {ve}")
+
+        top = tk.Toplevel(self.root)
+        top.title("Replenish Balance")
+        top.geometry("300x150")
+
+        label = tk.Label(top, text="Enter amount to add:")
+        label.pack(pady=10)
+
+        entry = tk.Entry(top)
+        entry.pack(pady=5)
+
+        add_button = tk.Button(top, text="Add", command=add_balance)
+        add_button.pack(pady=10)
+
+        
         
 if __name__ == "__main__":
-    '''root = tk.Tk()
+    root = tk.Tk()
     logging_window = ShopLogin(root)
     root.mainloop()
     del root
 
     if logging_window.is_logged_in:
+        currentID = logging_window.currentID
+
         root = tk.Tk()
-        shop_window = ShopMenu(root)
+        shop_window = ShopMenu(root, currentID)
         root.mainloop()
-    '''
-    root = tk.Tk()
-    shop_window = ShopMenu(root)
-    root.mainloop()
+    
