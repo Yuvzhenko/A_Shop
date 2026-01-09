@@ -5,30 +5,31 @@ import pymysql
 class ShopLogin():
     def __init__(self, root):
         self.root = root
-        self.is_logged_in = False
         self.root.title("Shop Login")
         self.root.geometry("600x400")
-        self.currentID = None
+        self.root.configure(bg="#111111")
 
+        self.is_logged_in = False
+        self.currentID = None
         self.tries = 3
 
-        self.frame = tk.Frame(self.root, bg="light grey", bd=0)
+        self.frame = tk.Frame(self.root, bg="#141414", bd=0)
         self.frame.pack(expand=True)
 
-        self.name = tk.Label(self.frame, text="UserName:", bg="light grey", width=10, height=2)
+        self.name = tk.Label(self.frame, text="UserName:", bg="#141414", fg="white", width=10, height=2)
         self.name.grid(row=0, column=0)
-        self.enterName = tk.Entry(self.frame, bd= 1)
+        self.enterName = tk.Entry(self.frame, bg="#141414", fg="#f3951d", insertbackground="#f3951d", bd=2)
         self.enterName.grid(row=0, column=1, padx=(5, 10))
 
-        self.password = tk.Label(self.frame, text="Password:", bg="light grey", width=10, height=2)
+        self.password = tk.Label(self.frame, text="Password:", bg="#141414", fg="white", width=10, height=2)
         self.password.grid(row=1, column=0)
-        self.enterPass = tk.Entry(self.frame, show='*')
+        self.enterPass = tk.Entry(self.frame, show='*', bg="#141414", fg="#f3951d", insertbackground="#f3951d", bd=2)
         self.enterPass.grid(row=1, column=1, padx=(5, 10))
 
-        self.signIn_bt = tk.Button(self.frame, text="Sign In", command=self.signIn, width=10)
+        self.signIn_bt = tk.Button(self.frame, text="Sign In", bg="#f3951d", activebackground="#f3951d", command=self.signIn, width=10)
         self.signIn_bt.grid(row=3, column=0, padx=10, pady=20)
 
-        self.reg_bt = tk.Button(self.frame, text="Register", command=self.register, width=10)
+        self.reg_bt = tk.Button(self.frame, text="Register", bg="#f3951d", activebackground="#f3951d", command=self.register, width=10)
         self.reg_bt.grid(row=3, column=1, padx=10, pady=20)
 
     def signIn(self):
@@ -94,6 +95,8 @@ class ShopMenu():
         self.root = root
         self.root.title("Shop")
         self.root.geometry("800x400")
+        self.root.configure(bg="#141414")
+
         self.cart = {}
         self.purchase_costs = 0
         
@@ -111,23 +114,24 @@ class ShopMenu():
 
         con.close()
 
-        self.products_frame = tk.Frame(self.root)
+        self.products_frame = tk.Frame(self.root, bg="#141414")
         self.products_frame.place(anchor="center", x=400, y=160)
 
-        self.logo_frame = tk.Frame(self.root)
+        self.logo_frame = tk.Frame(self.root, bg="#141414")
         self.logo_frame.place(x=100, y=50, anchor="center")
 
-        self.logo = tk.Label(self.logo_frame, text="DELIVERY", font=("Arial black", 24))
+        self.logo = tk.Label(self.logo_frame, text="DELIVERY", bg="#141414", fg="white", font=("Arial black", 24))
         self.logo.pack()
 
-        self.categories_frame = tk.Frame(self.root)
+        self.categories_frame = tk.Frame(self.root, bg="#141414")
         self.categories_frame.place(anchor="center", x=100, y=230)
 
         self.column_count = 2
 
         for index, name in enumerate(self.categories):
             lambda name=name:self.open_category(name)
-            btn = tk.Button(self.categories_frame, text=name, bd=0, font=("Arial", 11),
+            btn = tk.Button(self.categories_frame, text=name, bg="#141414", fg="white",
+                             activebackground="#141414", activeforeground="white", bd=0, font=("Arial", 11),
                              command=lambda n= name: self.open_category(n))
 
             r = index // self.column_count
@@ -135,17 +139,20 @@ class ShopMenu():
 
             btn.grid(row=r, column=c, padx=10, pady=10, sticky="ew")
         
-        self.cartFrame = tk.Frame(self.root)
+        self.cartFrame = tk.Frame(self.root, bg="#141414")
         self.cartFrame.place(anchor="center", x=730, y=50)
 
-        self.cartButton = tk.Button(self.cartFrame, text="cart", font=("Arial", 15, "bold"), bd=0,
-                                    command=self.cartFunc)
+        self.cartButton = tk.Button(self.cartFrame, text="cart", bg="#141414", fg="#f3951d",
+                                    activebackground="#141414", activeforeground="#f3951d",
+                                    font=("Arial", 15, "bold"), bd=0, command=self.cartFunc)
         self.cartButton.pack()
 
-        self.balance_lable = tk.Label(self.cartFrame, text=f"Balance: ${self.balance_amount}", font=("Arial", 12))
+        self.balance_lable = tk.Label(self.cartFrame, text=f"Balance: ${self.balance_amount}", font=("Arial", 12),
+                                      bg="#141414", fg="#f3951d")
         self.balance_lable.pack(pady=10)
 
-        self.replenishment_button = tk.Button(self.cartFrame, text="+", font=("Arial", 10), bd=0,
+        self.replenishment_button = tk.Button(self.cartFrame, text="+", font=("Arial", 10), bd=0, bg="#141414", fg="#f3951d",
+                                              activebackground="#141414", activeforeground="#f3951d",
                                               command=self.replenish_balance)
         self.replenishment_button.pack()
 
@@ -166,10 +173,10 @@ class ShopMenu():
 
             con.close()
 
-            tk.Label(self.products_frame, text=f"Category: {category_name}", font=("Arial", 14, "bold"),
-                     bg="white").grid(row=0, column=0)
+            tk.Label(self.products_frame, text=f"Category: {category_name}", fg="white", bg="#141414",
+                      font=("Arial", 14, "bold")).grid(row=0, column=0)
             if not products:
-                tk.Label(self.products_frame, text="No products avalible", bg="white").grid(row=1, column=0, fill="x")
+                tk.Label(self.products_frame, text="No products avalible", bg="#141414", fg="white").grid(row=1, column=0)
                 return
             r = 2
             for product in products:
@@ -178,10 +185,10 @@ class ShopMenu():
                 p_remains = product[2]
 
                 item_lable = tk.Label(self.products_frame, text=p_name, font=("Arial", 15),
-                                      bg="white", anchor="w")
+                                      bg="#141414", fg="white", anchor="w")
                 item_lable.grid(row= r, column=0, padx=100, pady=2)
                 if p_remains > 0:
-                    item_addToCart_button = tk.Button(self.products_frame, text=f"Buy for {p_price}$", 
+                    item_addToCart_button = tk.Button(self.products_frame, text=f"Buy for {p_price}$", bg="#f3951d", activebackground="#f3951d",
                                                command=lambda p=product: self.addToCart_button_func(p))
                     item_addToCart_button.grid(row=r, column=1)
                 else:
@@ -197,8 +204,8 @@ class ShopMenu():
             widget.destroy()
 
         if not self.cart:
-            tk.Label(self.products_frame, text="Cart is empty", font=("Arial", 15), 
-                     bg="white").grid(row=1, column=0)
+            tk.Label(self.products_frame, text="Cart is empty", bg="#141414", fg="white",
+                      font=("Arial", 15)).grid(row=1, column=0)
             return
 
         r = 2
@@ -207,16 +214,17 @@ class ShopMenu():
             price = info['price']
 
             item_lable = tk.Label(self.products_frame, text=f"{product} | Price: {price * amount}$ | Amount: {amount}",
-                                   font=("Arial", 12), bg="white", anchor="w")
+                                   font=("Arial", 12), bg="#141414", fg="white", anchor="w")
             item_lable.grid(row= r, column=0, padx=100, pady=2)
 
-            item_minus_button = tk.Button(self.products_frame, text="—", font=("Arial", 12),
+            item_minus_button = tk.Button(self.products_frame, text="—", font=("Arial", 12, "bold"),
+                                         bg="#800807", fg="white", activebackground="#800807", activeforeground="white", bd=0,
                                          command=lambda p=product: self.modify_cart(p, -1))
-            item_minus_button.grid(row=r, column=1)
+            item_minus_button.grid(row=r, column=1, pady=2)
 
             r += 1
 
-        self.buyButton = tk.Button(self.products_frame, text=f"Buy for {self.purchase_costs}$",
+        self.buyButton = tk.Button(self.products_frame, text=f"Buy for {self.purchase_costs}$", bg="#f3951d", activebackground="#f3951d",
                                     font=("Arial black", 12), command=self.buy_button_function)
         self.buyButton.grid(row=r, column=0, pady=15)
 
@@ -334,18 +342,18 @@ class ShopMenu():
         top = tk.Toplevel(self.root)
         top.title("Replenish Balance")
         top.geometry("300x150")
+        top.configure(bg="#141414")
 
-        label = tk.Label(top, text="Enter amount to add:")
+        label = tk.Label(top, text="Enter amount to add:", bg="#141414", fg="white")
         label.pack(pady=10)
 
-        entry = tk.Entry(top)
+        entry = tk.Entry(top, bg="#141414", fg="#f3951d", insertbackground="#f3951d", bd=2)
         entry.pack(pady=5)
 
-        add_button = tk.Button(top, text="Add", command=add_balance)
+        add_button = tk.Button(top, text="Add", bg="#f3951d", activebackground="#f3951d", bd=0, command=add_balance)
         add_button.pack(pady=10)
+        
 
-        
-        
 if __name__ == "__main__":
     root = tk.Tk()
     logging_window = ShopLogin(root)
@@ -358,4 +366,5 @@ if __name__ == "__main__":
         root = tk.Tk()
         shop_window = ShopMenu(root, currentID)
         root.mainloop()
+        
     
